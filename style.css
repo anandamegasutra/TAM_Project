@@ -1,0 +1,75 @@
+/* Font utama yang lebih modern */
+html, body, [class*="css"] {
+    font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
+}
+
+/* --- Sidebar --- */
+[data-testid="stSidebar"] {
+    background-color: #f8f9fa;
+    border-right: 1px solid #e6e6e6;
+}
+[data-testid="stSidebar"] .st-emotion-cache-16txtl3 {
+    color: #0056b3;
+    font-weight: 600;
+}
+
+/* --- Tombol Utama --- */
+.stButton>button {
+    border-radius: 5px;
+    border: 1px solid #007BFF;
+    background-color: #007BFF;
+    color: white;
+    font-weight: 900;
+    transition: 0.3s;
+    padding: 8px 16px;
+}
+.stButton>button:hover {
+    background-color: white;
+    color: #007BFF;
+    border: 1px solid #007BFF;
+    box-shadow: 0 4px 8px rgba(0,123,255,0.2);
+}
+
+/* --- Styling Header Halaman Utama --- */
+.st-emotion-cache-183lzff {
+    color: #0056b3; 
+}
+h2 { /* Header di Halaman Admin */
+    color: #007BFF;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 5px;
+}
+h3 {
+    color: rgb(15, 15, 15);
+}
+
+/* --- Styling Halaman Admin (Tabs) --- */
+/* Styling Tabs (Tetap ada untuk halaman Admin) */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 12px;
+}
+.stTabs [data-baseweb="tab"] {
+    height: 50px;
+    white-space: pre-wrap;
+    background-color: #f0f2f6;
+    border-radius: 5px 5px 0 0;
+    gap: 8px;
+    padding: 10px 15px;
+    border: 1px solid #e0e0e0;
+    transition: 0.3s;
+}
+.stTabs [aria-selected="true"] {
+    background-color: #FFFFFF;
+    color: #007BFF;
+    font-weight: bold;
+    border-bottom: 8px solid #007BFF;
+}
+
+/* Styling untuk label st.radio (Teks Pertanyaan) */
+.stRadio > label { 
+    font-size: 25px;
+    font-weight: 600; 
+    color: #222;
+    margin-bottom: 8px;
+    margin-top: 12px;
+}
