@@ -187,7 +187,6 @@ if menu == "Isi Kuesioner":
 
             df.to_csv(DATA_FILE, index=False)
             st.success("✅ Jawaban berhasil disimpan! Terima kasih sudah berpartisipasi 🙏")
-            st.balloons()
 
 # --- ### HALAMAN ADMIN (TIDAK ADA PERUBAHAN) ### ---
 elif menu == "Lihat Hasil (Admin)":
@@ -423,6 +422,7 @@ elif menu == "Lihat Hasil (Admin)":
 
                 try:
                     variable_prefixes = sorted(list(set([re.match(r'([A-Za-z_]+)', col).group(1) for col in df_numeric.columns])))
+                    variable_prefixes = [var for var in variable_prefixes if 'Unnamed' not in var]
                     hasil_per_variabel = []
                     for var in variable_prefixes:
                         cols_variabel = [col for col in df_numeric.columns if col.startswith(var)]
@@ -489,4 +489,5 @@ elif menu == "Lihat Hasil (Admin)":
     
     except Exception as e:
         st.error(f"❌ Terjadi error saat memproses analisis: {e}")
+
         st.error("Pastikan data yang di-upload memiliki format kolom yang sama (PU_1, PU_2, PEOU_1, dst.) dengan data kuesioner.")
