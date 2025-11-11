@@ -454,9 +454,11 @@ elif menu == "Lihat Hasil (Admin)":
                     st.error(f"Terjadi kesalahan saat membuat tabel analisis per variabel: {e}")
 
                 st.markdown("### Kesimpulan Analisis Deskriptif Keseluruhan")
-                jumlah_item = len(df_numeric.columns)
+                kolom_kuesioner_valid = [col for col in df_numeric.columns if re.match(r'([A-Z]+)_\d+', col)]
+                jumlah_item = len(kolom_kuesioner_valid)
+                
+                skor_total_sh = df_numeric[kolom_kuesioner_valid].to_numpy().sum()
                 skor_kriterium_sk = skor_maksimum_item * jumlah_item * jumlah_responden
-                skor_total_sh = df_numeric.to_numpy().sum()
                 
                 if skor_kriterium_sk > 0:
                     persentase_p = (skor_total_sh * 100) / skor_kriterium_sk
@@ -491,3 +493,4 @@ elif menu == "Lihat Hasil (Admin)":
         st.error(f"❌ Terjadi error saat memproses analisis: {e}")
 
         st.error("Pastikan data yang di-upload memiliki format kolom yang sama (PU_1, PU_2, PEOU_1, dst.) dengan data kuesioner.")
+
