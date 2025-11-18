@@ -253,8 +253,8 @@ elif menu == "Lihat Hasil (Admin)":
             st.warning("Perhatian: Tindakan ini akan menghapus data secara **PERMANEN** dari file kuesioner.")
             st.write("Untuk menghindari kesalahan, data ditampilkan dengan 'ID Baris' (index). Pilih 'ID Baris' yang ingin Anda hapus.")
 
-            df_with_index = df.reset_index().rename(columns={'index': 'ID Baris'})
-            st.dataframe(df_with_index, use_container_width=True)
+            df_with_index = df.copy().reset_index().rename(columns={'index': 'ID Baris'})
+            df_with_index['ID Baris'] = df_with_index['ID Baris'] + 1
 
             indices_to_delete = st.multiselect(
                 "Pilih 'ID Baris' yang akan dihapus:",
@@ -266,7 +266,9 @@ elif menu == "Lihat Hasil (Admin)":
                     st.error("Anda belum memilih baris untuk dihapus.")
                 else:
                     try:
-                        df_new = df.drop(indices_to_delete)
+                        indices_to_delete_original = [i - 1 for i in indices_to_delete_display]
+                        df_new = df.drop(indices_to_delete_original, axis=0)
+                        
                         df_new.to_csv(DATA_FILE, index=False)
                         st.success(f"Berhasil menghapus {len(indices_to_delete)} baris.")
                         st.info("Memuat ulang halaman untuk menampilkan data terbaru...")
@@ -317,7 +319,7 @@ elif menu == "Lihat Hasil (Admin)":
                                     "r-hitung (Correlation)": f"{correlation:.3f}", "Keterangan": status
                                 })
                         
-                    validity_df = pd.DataFrame(validity_results)
+                    validity_df.index = validity_df.index + 1
                     st.table(validity_df)
                     if "Tidak Valid" in validity_df['Keterangan'].values:
                         st.warning("⚠️ **Terdapat item yang tidak valid.** Item ini sebaiknya ditinjau kembali atau dihapus dari analisis selanjutnya.")
@@ -346,7 +348,10 @@ elif menu == "Lihat Hasil (Admin)":
                                 "Variabel": indicator, "Cronbach's Alpha": f"{alpha[0]:.3f}",
                                 "Keterangan": "Reliabel" if alpha[0] >= 0.7 else "Kurang Reliabel"
                             })
-                    st.table(pd.DataFrame(reliability_results))
+                    
+                    reliability_df = pd.DataFrame(reliability_results)
+                    reliability_df.index = reliability_df.index + 1
+                    st.table(reliability_df)
                 else:
                     st.info("Jumlah responden belum cukup untuk melakukan uji reliabilitas.")
             
@@ -385,8 +390,9 @@ elif menu == "Lihat Hasil (Admin)":
                     structural_estimates['p-value'] = pd.to_numeric(structural_estimates['p-value'], errors='coerce')
                     structural_estimates['Keterangan'] = np.where(structural_estimates['p-value'] < 0.05, "Terdukung", "Tidak Terdukung")
                     
+                    structural_estimates.index = structural_estimates.index + 1
                     st.table(structural_estimates)
-
+                    
                     st.markdown("### Indeks Kecocokan Model (Goodness of Fit)")
                     stats = sem.calc_stats(model)
                     st.table(stats.T)
@@ -447,7 +453,9 @@ elif menu == "Lihat Hasil (Admin)":
                         })
 
                     if hasil_per_variabel:
-                        st.dataframe(pd.DataFrame(hasil_per_variabel), use_container_width=True)
+                        hasil_per_variabel_df = pd.DataFrame(hasil_per_variabel)
+                        hasil_per_variabel_df.index = hasil_per_variabel_df.index + 1
+                        st.dataframe(hasil_per_variabel_df, use_container_width=True)r_width=True)
                     else:
                         st.warning("Tidak dapat mengidentifikasi variabel dari nama kolom.")
                 except Exception as e:
@@ -493,4 +501,5 @@ elif menu == "Lihat Hasil (Admin)":
         st.error(f"❌ Terjadi error saat memproses analisis: {e}")
 
         st.error("Pastikan data yang di-upload memiliki format kolom yang sama (PU_1, PU_2, PEOU_1, dst.) dengan data kuesioner.")
+
 
