@@ -455,7 +455,7 @@ elif menu == "Lihat Hasil (Admin)":
                     if hasil_per_variabel:
                         hasil_per_variabel_df = pd.DataFrame(hasil_per_variabel)
                         hasil_per_variabel_df.index = hasil_per_variabel_df.index + 1
-                        st.dataframe(hasil_per_variabel_df, use_container_width=True)r_width=True)
+                        st.dataframe(hasil_per_variabel_df, use_container_width=True)
                     else:
                         st.warning("Tidak dapat mengidentifikasi variabel dari nama kolom.")
                 except Exception as e:
@@ -501,5 +501,6 @@ elif menu == "Lihat Hasil (Admin)":
         st.error(f"❌ Terjadi error saat memproses analisis: {e}")
 
         st.error("Pastikan data yang di-upload memiliki format kolom yang sama (PU_1, PU_2, PEOU_1, dst.) dengan data kuesioner.")
+
 
 
