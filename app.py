@@ -107,7 +107,7 @@ if menu == "Isi Kuesioner":
             st.warning("Logo Gagal Dimuat")
 
     with col2:
-        st.title("Kuesioner TAM : Analisis Penerimaan Teknologi pada Grup FB Jual Beli Area Lede")
+        st.markdown('<h1 id="app-title-kuesioner">Kuesioner TAM : Analisis Penerimaan Teknologi pada Grup FB Jual Beli Area Lede</h1>', unsafe_allow_html=True)
         st.caption("")
     # --- AKHIR TAMPILAN HEADER ---
 
@@ -185,10 +185,12 @@ if menu == "Isi Kuesioner":
             except (FileNotFoundError, pd.errors.EmptyDataError):
                 df = df_new_row 
 
+            # Simpan TANPA index (menghindari 'Unnamed: 0' di masa depan)
             df.to_csv(DATA_FILE, index=False)
             st.success("✅ Jawaban berhasil disimpan! Terima kasih sudah berpartisipasi 🙏")
+            
 
-# --- ### HALAMAN ADMIN (TIDAK ADA PERUBAHAN) ### ---
+# --- ### HALAMAN ADMIN (PERBAIKAN DIMULAI DARI SINI) ### ---
 elif menu == "Lihat Hasil (Admin)":
     st.title("📈 Dashboard Hasil Penelitian TAM")
 
@@ -241,9 +243,20 @@ elif menu == "Lihat Hasil (Admin)":
         "🔢 Analisis Deskriptif (Persentase)"
     ])
 
+    # === [PERBAIKAN 1]: TAB 1 - TAMPILAN DATA MENTAH ===
     with tab1:
         st.subheader("📂 Data Mentah Responden")
-        st.dataframe(df)
+        
+        # 1. Buang 'Unnamed: 0' dari tampilan jika ada
+        df_display_tab1 = df.drop(columns=['Unnamed: 0'], errors='ignore')
+        
+        # 2. Buat index baru yang 1-based HANYA UNTUK TAMPILAN
+        df_display_tab1.index = np.arange(1, len(df_display_tab1) + 1)
+        df_display_tab1.index.name = "ID_Responden"
+        
+        # 3. Tampilkan dataframe yang sudah bersih
+        st.dataframe(df_display_tab1)
+        
         num_responden_tab1 = len(df)
         st.info(f"Jumlah responden saat ini: **{num_responden_tab1}** orang.")
 
@@ -251,24 +264,38 @@ elif menu == "Lihat Hasil (Admin)":
             st.markdown("---")
             st.subheader("🗑️ Hapus Baris Data")
             st.warning("Perhatian: Tindakan ini akan menghapus data secara **PERMANEN** dari file kuesioner.")
-            st.write("Untuk menghindari kesalahan, data ditampilkan dengan 'ID Baris' (index). Pilih 'ID Baris' yang ingin Anda hapus.")
+            st.write("Pilih 'ID_Responden' (yang dimulai dari 1) yang ingin Anda hapus.")
 
-            df_with_index = df.copy().reset_index().rename(columns={'index': 'ID Baris'})
-            df_with_index['ID Baris'] = df_with_index['ID Baris'] + 1
+            # === [PERBAIKAN 2]: TAB 1 - LOGIKA HAPUS DATA (1-BASED) ===
+            
+            # 1. Buat DataFrame Hapus dengan 2 jenis ID
+            df_with_index = df.reset_index().rename(columns={'index': 'ID_Baris_Internal (0-based)'})
+            df_with_index['ID_Responden (1-based)'] = df_with_index['ID_Baris_Internal (0-based)'] + 1
+            
+            # 2. Buat Peta untuk konversi
+            #    (key = ID 1-based yg dilihat user, value = ID 0-based yg dipakai pd.drop)
+            options_map = df_with_index.set_index('ID_Responden (1-based)')['ID_Baris_Internal (0-based)'].to_dict()
+            
+            # 3. Tampilkan tabel HANYA dengan ID 1-based (sembunyikan ID internal)
+            df_display_delete = df_with_index.drop(columns=['Unnamed: 0', 'ID_Baris_Internal (0-based)'], errors='ignore')
+            st.dataframe(df_display_delete.set_index('ID_Responden (1-based)'), use_container_width=True)
 
-            indices_to_delete = st.multiselect(
-                "Pilih 'ID Baris' yang akan dihapus:",
-                df_with_index['ID Baris'].tolist() 
+            # 4. Beri opsi multiselect berdasarkan ID 1-based
+            ids_to_select = sorted(options_map.keys())
+            selected_ids_1based = st.multiselect(
+                "Pilih 'ID_Responden (1-based)' yang akan dihapus:",
+                options=ids_to_select
             )
 
             if st.button("Hapus Baris Terpilih Secara Permanen", key="delete_button"):
-                if not indices_to_delete:
+                if not selected_ids_1based:
                     st.error("Anda belum memilih baris untuk dihapus.")
                 else:
                     try:
-                        indices_to_delete_original = [i - 1 for i in indices_to_delete_display]
-                        df_new = df.drop(indices_to_delete_original, axis=0)
+                        # 5. Konversi ID 1-based pilihan user ke 0-based untuk pd.drop
+                        indices_to_delete = [options_map[id_] for id_ in selected_ids_1based]
                         
+                        df_new = df.drop(indices_to_delete)
                         df_new.to_csv(DATA_FILE, index=False)
                         st.success(f"Berhasil menghapus {len(indices_to_delete)} baris.")
                         st.info("Memuat ulang halaman untuk menampilkan data terbaru...")
@@ -277,12 +304,34 @@ elif menu == "Lihat Hasil (Admin)":
                         st.error(f"Gagal menghapus data: {e}")
 
     try:
-        df_numeric = df.select_dtypes(include=['number'])
+        
+        item_cols = []
+        for indicator, qs in questions.items():
+            if "Usefulness" in indicator: abbr = "PU"
+            elif "Ease of Use" in indicator: abbr = "PEOU"
+            elif "Attitude" in indicator: abbr = "ATU"
+            elif "Intention" in indicator: abbr = "BI"
+            elif "Actual" in indicator: abbr = "AU"
+            else: abbr = indicator.split()[0]
+            
+            for i in range(len(qs)):
+                item_name = f"{abbr}_{i+1}"
+                if item_name in df.columns: # Cek jika kolom ada di data
+                    item_cols.append(item_name)
+
+        df_numeric = df[item_cols].copy()
+        
+        # Cek jika df_numeric kosong (misal salah upload file)
+        if df_numeric.empty:
+            st.error("Gagal menemukan kolom item yang valid (misal: PU_1, PEOU_1, dst.) di dalam data. Analisis tidak dapat dilanjutkan.")
+            st.stop()
+        
+        # 3. Variabel dan Pengecekan (Sama seperti sebelumnya)
         num_responden = len(df)
         MIN_RESPONDEN_ANALYSIS = 2
-        MAX_RESPONDEN_ANALYSIS = 83
+        MAX_RESPONDEN_ANALYSIS = 83 
         analysis_allowed = (MIN_RESPONDEN_ANALYSIS < num_responden <= MAX_RESPONDEN_ANALYSIS)
-
+        
         with tab2:
             st.subheader("STATISTIK DESKRIPTIF & UJI INSTRUMEN")
 
@@ -319,7 +368,8 @@ elif menu == "Lihat Hasil (Admin)":
                                     "r-hitung (Correlation)": f"{correlation:.3f}", "Keterangan": status
                                 })
                         
-                    validity_df.index = validity_df.index + 1
+                    validity_df = pd.DataFrame(validity_results)
+                    validity_df.index = np.arange(1, len(validity_df) + 1)
                     st.table(validity_df)
                     if "Tidak Valid" in validity_df['Keterangan'].values:
                         st.warning("⚠️ **Terdapat item yang tidak valid.** Item ini sebaiknya ditinjau kembali atau dihapus dari analisis selanjutnya.")
@@ -340,6 +390,7 @@ elif menu == "Lihat Hasil (Admin)":
                         else: abbr = indicator.split()[0]
                         
                         cols = [f"{abbr}_{i+1}" for i in range(len(qs))]
+                        # Gunakan item_cols lagi
                         cols_exist = [col for col in cols if col in df_numeric.columns]
                         
                         if len(cols_exist) > 1:
@@ -350,7 +401,7 @@ elif menu == "Lihat Hasil (Admin)":
                             })
                     
                     reliability_df = pd.DataFrame(reliability_results)
-                    reliability_df.index = reliability_df.index + 1
+                    reliability_df.index = np.arange(1, len(reliability_df) + 1)
                     st.table(reliability_df)
                 else:
                     st.info("Jumlah responden belum cukup untuk melakukan uji reliabilitas.")
@@ -364,6 +415,7 @@ elif menu == "Lihat Hasil (Admin)":
 
             if analysis_allowed:
                 try:
+                    # Model SEM (Tidak berubah, tapi sekarang aman)
                     model_desc = """
                     # Measurement Model
                     PU =~ PU_1 + PU_2 + PU_3
@@ -379,6 +431,7 @@ elif menu == "Lihat Hasil (Admin)":
                     """
                     
                     model = sem.Model(model_desc)
+                    # Ini sekarang aman, df_numeric bersih
                     results = model.fit(df_numeric)
 
                     st.markdown("### Hasil Uji Hipotesis")
@@ -390,17 +443,8 @@ elif menu == "Lihat Hasil (Admin)":
                     structural_estimates['p-value'] = pd.to_numeric(structural_estimates['p-value'], errors='coerce')
                     structural_estimates['Keterangan'] = np.where(structural_estimates['p-value'] < 0.05, "Terdukung", "Tidak Terdukung")
                     
-                    structural_estimates.index = structural_estimates.index + 1
+                    structural_estimates.index = np.arange(1, len(structural_estimates) + 1)
                     st.table(structural_estimates)
-                    
-                    st.markdown("### Indeks Kecocokan Model (Goodness of Fit)")
-                    stats = sem.calc_stats(model)
-                    st.table(stats.T)
-                    st.info("""
-                    **Indeks Penting:**
-                    - **CFI & TLI**: Semakin mendekati 1, semakin baik (> 0.90).
-                    - **RMSEA**: Semakin mendekati 0, semakin baik (< 0.08).
-                    """)
 
                     st.markdown("### Diagram Jalur (Path Diagram)")
                     try:
@@ -427,8 +471,12 @@ elif menu == "Lihat Hasil (Admin)":
                 st.write("Tabel ini merinci tingkat pencapaian skor untuk setiap variabel penelitian.")
 
                 try:
+                    # Logika ini sekarang aman, karena df_numeric bersih
                     variable_prefixes = sorted(list(set([re.match(r'([A-Za-z_]+)', col).group(1) for col in df_numeric.columns])))
+                    
+                    # Hapus 'Unnamed' jika masih terdeteksi (meskipun seharusnya tidak)
                     variable_prefixes = [var for var in variable_prefixes if 'Unnamed' not in var]
+                    
                     hasil_per_variabel = []
                     for var in variable_prefixes:
                         cols_variabel = [col for col in df_numeric.columns if col.startswith(var)]
@@ -453,20 +501,18 @@ elif menu == "Lihat Hasil (Admin)":
                         })
 
                     if hasil_per_variabel:
-                        hasil_per_variabel_df = pd.DataFrame(hasil_per_variabel)
-                        hasil_per_variabel_df.index = hasil_per_variabel_df.index + 1
-                        st.dataframe(hasil_per_variabel_df, use_container_width=True)
+                        st.dataframe(pd.DataFrame(hasil_per_variabel), use_container_width=True)
                     else:
                         st.warning("Tidak dapat mengidentifikasi variabel dari nama kolom.")
                 except Exception as e:
                     st.error(f"Terjadi kesalahan saat membuat tabel analisis per variabel: {e}")
 
                 st.markdown("### Kesimpulan Analisis Deskriptif Keseluruhan")
-                kolom_kuesioner_valid = [col for col in df_numeric.columns if re.match(r'([A-Z]+)_\d+', col)]
-                jumlah_item = len(kolom_kuesioner_valid)
                 
-                skor_total_sh = df_numeric[kolom_kuesioner_valid].to_numpy().sum()
+                # Perhitungan ini sekarang BENAR karena df_numeric bersih
+                jumlah_item = len(df_numeric.columns) 
                 skor_kriterium_sk = skor_maksimum_item * jumlah_item * jumlah_responden
+                skor_total_sh = df_numeric.to_numpy().sum()
                 
                 if skor_kriterium_sk > 0:
                     persentase_p = (skor_total_sh * 100) / skor_kriterium_sk
@@ -488,9 +534,9 @@ elif menu == "Lihat Hasil (Admin)":
                     with st.expander("Lihat Detail Rumus Perhitungan Keseluruhan"):
                         st.latex(r"P = \frac{\sum SH}{\sum SK} \times 100\%")
                         st.markdown(f"""
-                            - **Skor Kriterium ($\sum SK$)**: `{skor_maksimum_item} (skor maks) × {jumlah_item} (item) × {jumlah_responden} (responden) = {int(skor_kriterium_sk)}`
-                            - **Skor Total Jawaban ($\sum SH$)**: `{int(skor_total_sh)}`
-                        """) 
+                             - **Skor Kriterium ($\sum SK$)**: `{skor_maksimum_item} (skor maks) × {jumlah_item} (item) × {jumlah_responden} (responden) = {int(skor_kriterium_sk)}`
+                             - **Skor Total Jawaban ($\sum SH$)**: `{int(skor_total_sh)}`
+                             """) 
                 else:
                     st.info("Data tidak cukup untuk perhitungan keseluruhan.")
             
@@ -498,9 +544,5 @@ elif menu == "Lihat Hasil (Admin)":
                 st.warning(f"Jumlah responden ({num_responden}) harus di antara {MIN_RESPONDEN_ANALYSIS+1} dan {MAX_RESPONDEN_ANALYSIS} untuk melakukan analisis deskriptif.")
     
     except Exception as e:
-        st.error(f"❌ Terjadi error saat memproses analisis: {e}")
-
+        st.error(f"❌ Terjadi error besar saat memproses analisis: {e}")
         st.error("Pastikan data yang di-upload memiliki format kolom yang sama (PU_1, PU_2, PEOU_1, dst.) dengan data kuesioner.")
-
-
-
