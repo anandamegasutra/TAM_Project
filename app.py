@@ -427,7 +427,7 @@ elif menu == "Lihat Hasil (Admin)":
                     PEOU ~ PU
                     ATU ~ PEOU
                     AU ~ BI
-                    PEOU ~ BI
+                    BI ~ PEOU
                     """
                     
                     model = sem.Model(model_desc)
@@ -548,6 +548,7 @@ elif menu == "Lihat Hasil (Admin)":
     except Exception as e:
         st.error(f"❌ Terjadi error besar saat memproses analisis: {e}")
         st.error("Pastikan data yang di-upload memiliki format kolom yang sama (PU_1, PU_2, PEOU_1, dst.) dengan data kuesioner.")
+
 
 
 
