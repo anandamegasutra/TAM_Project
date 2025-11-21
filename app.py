@@ -425,8 +425,10 @@ elif menu == "Lihat Hasil (Admin)":
                     AU =~ AU_1 + AU_2 + AU_3
                     # Structural Model
                     PU ~ PEOU
-                    ATU ~ PEOU + PU
-                    BI ~ PU + ATU + PEOU
+                    PEOU ~ PU
+                    PU ~ ATU
+                    PU ~ AU
+                    ATU ~ PEOU
                     AU ~ BI
                     """
                     
@@ -548,4 +550,5 @@ elif menu == "Lihat Hasil (Admin)":
     except Exception as e:
         st.error(f"❌ Terjadi error besar saat memproses analisis: {e}")
         st.error("Pastikan data yang di-upload memiliki format kolom yang sama (PU_1, PU_2, PEOU_1, dst.) dengan data kuesioner.")
+
 
